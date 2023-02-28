@@ -38,3 +38,4 @@ out
 
 # Jetbrains IDEs
 .idea
+.vscode
