@@ -72,8 +72,8 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     auto items = fetchEntities2(type, aabb, actor);
     std::vector<gsl::not_null<class Actor*>> nitems;
     nitems.clear();
-    for(auto& item : items) {
-        if(item!=nullptr){
+    for (auto& item : items) {
+        if (item != nullptr) {
             nitems.push_back(gsl::make_not_null(item));
         }
     }
