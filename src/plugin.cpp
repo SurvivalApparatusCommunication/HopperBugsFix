@@ -56,6 +56,8 @@ void PluginInit() {
 //     return true;
 // }
 
+std::vector<gsl::not_null<class Actor*>> tempItems;
+
 TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
               "?fetchEntities@BlockSource@@UEAA?AV?$span@V?$not_null@PEAVActor@@@gsl@@$0?"
               "0@gsl@@W4ActorType@@AEBVAABB@@PEBVActor@@@Z",
@@ -81,11 +83,14 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     expandedAABB.max.z += 0.125f;
     auto items = original(this, type, expandedAABB, actor);
 
-    std::vector<gsl::not_null<class Actor*>> nitems;
-    nitems.clear();
+    // std::erase_if(items.begin(), items.end(), [&](auto& item){
+    // 	return !aabb.intersects(item->getAABB());
+    // });
+
+    tempItems.clear();
     for (auto& item : items) {
         if (aabb.intersects(item->getAABB())) {
-            nitems.push_back(item);
+            tempItems.push_back(item);
         }
     }
 
@@ -97,7 +102,7 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     //         nitems.push_back(gsl::make_not_null(item));
     //     }
     // }
-    return gsl::span(nitems);
+    return gsl::span(tempItems);
 }
 // TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
 //               "?fetchEntities@BlockSource@@UEAA?AV?$span@V?$not_null@PEAVActor@@@gsl@@$0?"
