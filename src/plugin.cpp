@@ -51,8 +51,8 @@ void PluginInit() {
 //               int uk1,
 //               class ItemStack const& item) {
 //     bool res = original(this, uk0, uk1, item);
-//     // logger.info("{} {} {} {} {} {} {} {} {}", uk0, uk1, item.getTypeName(), res, (int)dAccess<bool>(this, 388),
-//     //             (int)dAccess<bool>(this, 628), i, k, dAccess<int>(this, i));
+//     // logger.info("{} {} {} {} {} {} {}", uk0, uk1, item.getTypeName(), res, (int)dAccess<bool>(this, 388),
+//     //             (int)dAccess<bool>(this, 628), dAccess<int>(this, 632));
 //     return true;
 // }
 
