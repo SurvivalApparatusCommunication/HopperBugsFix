@@ -104,6 +104,11 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     // }
     return gsl::span(tempItems);
 }
+
+TInstanceHook(bool, "?intersectsInner@AABB@@QEBA_NAEBV1@@Z", AABB, class AABB const& aabb) {
+    return intersects(aabb);
+}
+
 // TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
 //               "?fetchEntities@BlockSource@@UEAA?AV?$span@V?$not_null@PEAVActor@@@gsl@@$0?"
 //               "0@gsl@@PEBVActor@@AEBVAABB@@_N2@Z",
