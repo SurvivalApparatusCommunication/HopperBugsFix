@@ -66,17 +66,37 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     if (type != ActorType::ItemEntity || (aabb.max.x - aabb.min.x > 1) || (aabb.max.z - aabb.min.z > 1)) {
         return original(this, type, aabb, actor);
     }
+    Vec3 center = aabb.getCenter();
+    if (abs(std::round(center.x / 16.0f) * 16.0f - center.x) > 1 &&
+        abs(std::round(center.z / 16.0f) * 16.0f - center.z) > 1) {
+        return original(this, type, aabb, actor);
+    }
     // if (i == 0) {
     //     pt().drawCuboid(aabb, this->getDimensionId(), mce::ColorPalette::GREEN);
     // }
-    auto items = fetchEntities2(type, aabb, actor);
+    AABB expandedAABB = aabb;
+    expandedAABB.min.x -= 0.125f;
+    expandedAABB.min.z -= 0.125f;
+    expandedAABB.max.x += 0.125f;
+    expandedAABB.max.z += 0.125f;
+    auto items = original(this, type, expandedAABB, actor);
+
     std::vector<gsl::not_null<class Actor*>> nitems;
     nitems.clear();
     for (auto& item : items) {
-        if (item != nullptr) {
-            nitems.push_back(gsl::make_not_null(item));
+        if (aabb.intersects(item->getAABB())) {
+            nitems.push_back(item);
         }
     }
+
+    // auto items = fetchEntities2(type, aabb, actor);
+    // std::vector<gsl::not_null<class Actor*>> nitems;
+    // nitems.clear();
+    // for (auto& item : items) {
+    //     if (item != nullptr) {
+    //         nitems.push_back(gsl::make_not_null(item));
+    //     }
+    // }
     return gsl::span(nitems);
 }
 // TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
