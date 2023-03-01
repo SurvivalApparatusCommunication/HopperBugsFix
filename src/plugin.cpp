@@ -82,11 +82,7 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     expandedAABB.max.x += 0.125f;
     expandedAABB.max.z += 0.125f;
     auto items = original(this, type, expandedAABB, actor);
-
-    // std::erase_if(items.begin(), items.end(), [&](auto& item){
-    // 	return !aabb.intersects(item->getAABB());
-    // });
-
+    tempItems.swap(std::vector<gsl::not_null<class Actor*>>());
     tempItems.clear();
     for (auto& item : items) {
         if (aabb.intersects(item->getAABB())) {
