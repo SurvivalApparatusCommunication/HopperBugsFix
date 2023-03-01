@@ -63,7 +63,7 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
               enum class ActorType type,
               class AABB const& aabb,
               class Actor const* actor) {
-    if (type != ActorType::ItemEntity) {
+    if (type != ActorType::ItemEntity || (aabb.max.x - aabb.min.x > 1) || (aabb.max.z - aabb.min.z > 1)) {
         return original(this, type, aabb, actor);
     }
     // if (i == 0) {
