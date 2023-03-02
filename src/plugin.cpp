@@ -76,22 +76,22 @@ TInstanceHook(void,
     sbSet.erase(this);
     original(this, bs);
 }
-// TInstanceHook(void,
-//               "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
-//               JukeboxBlockActor,
-//               class BlockSource& bs) {
-//     logger.info("{} erase", __LINE__);
-//     sbSet.erase(this);
-//     original(this, bs);
-// }
-// TInstanceHook(void,
-//               "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
-//               JukeboxBlockActor,
-//               class ItemStack const& i) {
-//     logger.info("{} erase", __LINE__);
-//     sbSet.erase(this);
-//     original(this, i);
-// }
+TInstanceHook(void,
+              "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
+              JukeboxBlockActor,
+              class BlockSource& bs) {
+    logger.info("{} erase", __LINE__);
+    sbSet.erase(this);
+    original(this, bs);
+}
+TInstanceHook(void,
+              "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
+              JukeboxBlockActor,
+              class ItemStack const& i) {
+    logger.info("{} erase", __LINE__);
+    sbSet.erase(this);
+    original(this, i);
+}
 
 std::vector<gsl::not_null<class Actor*>> tempItems;
 
