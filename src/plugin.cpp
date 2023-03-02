@@ -44,16 +44,53 @@ void PluginInit() {
 //     return pt;
 // }
 
-// TInstanceHook(bool,
-//               "?canPullOutItem@JukeboxBlockActor@@UEBA_NHHAEBVItemStack@@@Z",
+std::unordered_set<JukeboxBlockActor*> sbSet;
+
+TInstanceHook(bool,
+              "?canPullOutItem@JukeboxBlockActor@@UEBA_NHHAEBVItemStack@@@Z",
+              JukeboxBlockActor,
+              int uk0,
+              int uk1,
+              class ItemStack const& item) {
+    bool res = original(this, uk0, uk1, item);
+    // logger.info("{} {} {} {} {} {} {}", uk0, uk1, item.getTypeName(), res, (int)dAccess<bool>(this, 388),
+    //             (int)dAccess<bool>(this, 628), dAccess<int>(this, 632));
+    if (!res) {
+        auto iter = sbSet.find(this);
+
+        if (iter == sbSet.end()) {
+            sbSet.insert(this);
+            return res;
+        }
+        // logger.info("{} erase",__LINE__);
+        sbSet.erase(iter);
+        return true;
+    }
+    return true;
+}
+TInstanceHook(void,
+              "?onChanged@JukeboxBlockActor@@UEAAXAEAVBlockSource@@@Z",
+              JukeboxBlockActor,
+              class BlockSource& bs) {
+    // logger.info("{} erase", __LINE__);
+    sbSet.erase(this);
+    original(this, bs);
+}
+// TInstanceHook(void,
+//               "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
 //               JukeboxBlockActor,
-//               int uk0,
-//               int uk1,
-//               class ItemStack const& item) {
-//     bool res = original(this, uk0, uk1, item);
-//     // logger.info("{} {} {} {} {} {} {}", uk0, uk1, item.getTypeName(), res, (int)dAccess<bool>(this, 388),
-//     //             (int)dAccess<bool>(this, 628), dAccess<int>(this, 632));
-//     return true;
+//               class BlockSource& bs) {
+//     logger.info("{} erase", __LINE__);
+//     sbSet.erase(this);
+//     original(this, bs);
+// }
+// TInstanceHook(void,
+//               "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
+//               JukeboxBlockActor,
+//               class ItemStack const& i) {
+//     logger.info("{} erase", __LINE__);
+//     sbSet.erase(this);
+//     original(this, i);
 // }
 
 std::vector<gsl::not_null<class Actor*>> tempItems;
@@ -73,9 +110,6 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
         abs(std::round(center.z / 16.0f) * 16.0f - center.z) > 1) {
         return original(this, type, aabb, actor);
     }
-    // if (i == 0) {
-    //     pt().drawCuboid(aabb, this->getDimensionId(), mce::ColorPalette::GREEN);
-    // }
     AABB expandedAABB = aabb;
     expandedAABB.min.x -= 0.125f;
     expandedAABB.min.z -= 0.125f;
@@ -83,25 +117,16 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     expandedAABB.max.z += 0.125f;
     auto items = original(this, type, expandedAABB, actor);
 
-    // std::erase_if(items.begin(), items.end(), [&](auto& item){
-    // 	return !aabb.intersects(item->getAABB());
-    // });
+    if (items.empty()) {
+        return items;
+    }
     std::vector<gsl::not_null<class Actor*>>().swap(tempItems);
-    tempItems.clear();
+    tempItems.reserve(items.size());
     for (auto& item : items) {
         if (aabb.intersects(item->getAABB())) {
             tempItems.push_back(item);
         }
     }
-
-    // auto items = fetchEntities2(type, aabb, actor);
-    // std::vector<gsl::not_null<class Actor*>> nitems;
-    // nitems.clear();
-    // for (auto& item : items) {
-    //     if (item != nullptr) {
-    //         nitems.push_back(gsl::make_not_null(item));
-    //     }
-    // }
     return gsl::span(tempItems);
 }
 
