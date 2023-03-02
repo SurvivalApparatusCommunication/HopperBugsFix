@@ -44,7 +44,7 @@ void PluginInit() {
 //     return pt;
 // }
 
-std::unordered_set<JukeboxBlockActor*> sbSet;
+// std::unordered_set<JukeboxBlockActor*> sbSet;
 
 TInstanceHook(bool,
               "?canPullOutItem@JukeboxBlockActor@@UEBA_NHHAEBVItemStack@@@Z",
@@ -52,46 +52,47 @@ TInstanceHook(bool,
               int uk0,
               int uk1,
               class ItemStack const& item) {
-    bool res = original(this, uk0, uk1, item);
-    // logger.info("{} {} {} {} {} {} {}", uk0, uk1, item.getTypeName(), res, (int)dAccess<bool>(this, 388),
-    //             (int)dAccess<bool>(this, 628), dAccess<int>(this, 632));
-    if (!res) {
-        auto iter = sbSet.find(this);
+    // auto sbptr = (JukeboxBlockActor*)((uintptr_t)this - 240);
+    // bool res = original(this, uk0, uk1, item);
+    // logger.info("{} {} {} {} {} {}", uk0, uk1, item.getTypeName(), (uintptr_t)sbptr,
+    //             (int)dAccess<bool>(sbptr, 628), dAccess<int>(sbptr, 632));
+    // if (!res) {
+    //     auto iter = sbSet.find(sbptr);
 
-        if (iter == sbSet.end()) {
-            sbSet.insert(this);
-            return res;
-        }
-        // logger.info("{} erase",__LINE__);
-        sbSet.erase(iter);
-        return true;
-    }
-    return true;
+    //     if (iter == sbSet.end()) {
+    //         sbSet.insert(sbptr);
+    //         return res;
+    //     }
+    //     logger.info("{} erase {}", __LINE__, (uintptr_t)*iter);
+    //     sbSet.erase(iter);
+    //     return true;
+    // }
+    return dAccess<int>(this, 632 - 240) > 2;
 }
-TInstanceHook(void,
-              "?onChanged@JukeboxBlockActor@@UEAAXAEAVBlockSource@@@Z",
-              JukeboxBlockActor,
-              class BlockSource& bs) {
-    // logger.info("{} erase", __LINE__);
-    sbSet.erase(this);
-    original(this, bs);
-}
-TInstanceHook(void,
-              "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
-              JukeboxBlockActor,
-              class BlockSource& bs) {
-    logger.info("{} erase", __LINE__);
-    sbSet.erase(this);
-    original(this, bs);
-}
-TInstanceHook(void,
-              "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
-              JukeboxBlockActor,
-              class ItemStack const& i) {
-    logger.info("{} erase", __LINE__);
-    sbSet.erase(this);
-    original(this, i);
-}
+// TInstanceHook(void,
+//               "?onChanged@JukeboxBlockActor@@UEAAXAEAVBlockSource@@@Z",
+//               JukeboxBlockActor,
+//               class BlockSource& bs) {
+//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
+//     sbSet.erase(this);
+//     original(this, bs);
+// }
+// TInstanceHook(void,
+//               "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
+//               JukeboxBlockActor,
+//               class BlockSource& bs) {
+//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
+//     sbSet.erase(this);
+//     original(this, bs);
+// }
+// TInstanceHook(void,
+//               "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
+//               JukeboxBlockActor,
+//               class ItemStack const& i) {
+//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
+//     sbSet.erase(this);
+//     original(this, i);
+// }
 
 std::vector<gsl::not_null<class Actor*>> tempItems;
 
