@@ -17,6 +17,7 @@
 #include "llapi/mc/BoundingBox.hpp"
 #include "llapi/mc/ChunkPos.hpp"
 #include "llapi/mc/ChunkBlockPos.hpp"
+#include "llapi/mc/LevelChunk.hpp"
 #include "llapi/ScheduleAPI.h"
 #include "llapi/ParticleAPI.h"
 #include "gsl/gsl"
@@ -25,26 +26,8 @@
 
 extern Logger logger;
 
-// int i = 0;
-
 void PluginInit() {
-    // Schedule::repeat(
-    //     [&]() {
-    //         if (i < 39) {
-    //             i += 1;
-    //         } else {
-    //             i = 0;
-    //         }
-    //     },
-    //     1);
 }
-
-// ParticleCUI& pt() {
-//     static ParticleCUI pt = ParticleCUI();
-//     return pt;
-// }
-
-// std::unordered_set<JukeboxBlockActor*> sbSet;
 
 TInstanceHook(bool,
               "?canPullOutItem@JukeboxBlockActor@@UEBA_NHHAEBVItemStack@@@Z",
@@ -52,47 +35,8 @@ TInstanceHook(bool,
               int uk0,
               int uk1,
               class ItemStack const& item) {
-    // auto sbptr = (JukeboxBlockActor*)((uintptr_t)this - 240);
-    // bool res = original(this, uk0, uk1, item);
-    // logger.info("{} {} {} {} {} {}", uk0, uk1, item.getTypeName(), (uintptr_t)sbptr,
-    //             (int)dAccess<bool>(sbptr, 628), dAccess<int>(sbptr, 632));
-    // if (!res) {
-    //     auto iter = sbSet.find(sbptr);
-
-    //     if (iter == sbSet.end()) {
-    //         sbSet.insert(sbptr);
-    //         return res;
-    //     }
-    //     logger.info("{} erase {}", __LINE__, (uintptr_t)*iter);
-    //     sbSet.erase(iter);
-    //     return true;
-    // }
     return dAccess<int>(this, 632 - 240) > 2;
 }
-// TInstanceHook(void,
-//               "?onChanged@JukeboxBlockActor@@UEAAXAEAVBlockSource@@@Z",
-//               JukeboxBlockActor,
-//               class BlockSource& bs) {
-//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
-//     sbSet.erase(this);
-//     original(this, bs);
-// }
-// TInstanceHook(void,
-//               "?stopPlayingRecord@JukeboxBlockActor@@QEBAXAEAVBlockSource@@@Z",
-//               JukeboxBlockActor,
-//               class BlockSource& bs) {
-//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
-//     sbSet.erase(this);
-//     original(this, bs);
-// }
-// TInstanceHook(void,
-//               "?setRecord@JukeboxBlockActor@@QEAAXAEBVItemStack@@@Z",
-//               JukeboxBlockActor,
-//               class ItemStack const& i) {
-//     logger.info("{} erase {}", __LINE__, (uintptr_t)this);
-//     sbSet.erase(this);
-//     original(this, i);
-// }
 
 std::vector<gsl::not_null<class Actor*>> tempItems;
 
@@ -106,47 +50,24 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     if (type != ActorType::ItemEntity || (aabb.max.x - aabb.min.x > 1) || (aabb.max.z - aabb.min.z > 1)) {
         return original(this, type, aabb, actor);
     }
-    Vec3 center = aabb.getCenter();
-    if (abs(std::round(center.x / 16.0f) * 16.0f - center.x) > 1 &&
-        abs(std::round(center.z / 16.0f) * 16.0f - center.z) > 1) {
-        return original(this, type, aabb, actor);
-    }
-    AABB expandedAABB = aabb;
-    expandedAABB.min.x -= 0.125f;
-    expandedAABB.min.z -= 0.125f;
-    expandedAABB.max.x += 0.125f;
-    expandedAABB.max.z += 0.125f;
-    auto items = original(this, type, expandedAABB, actor);
 
-    if (items.empty()) {
-        return items;
-    }
+    ChunkPos minChunk(((int)std::floor(aabb.min.x - 0.125f)) >> 4, ((int)std::floor(aabb.min.z - 0.125f)) >> 4);
+    ChunkPos maxChunk(((int)std::floor(aabb.max.x + 0.125f)) >> 4, ((int)std::floor(aabb.max.z + 0.125f)) >> 4);
+
     std::vector<gsl::not_null<class Actor*>>().swap(tempItems);
+    std::vector<class Actor*> items;
+    items.clear();
+
+    for (int x = minChunk.x; x <= maxChunk.x; x++)
+        for (int z = minChunk.z; z <= maxChunk.z; z++) {
+            LevelChunk* chunk = getChunk({x, z});
+            if (chunk != nullptr) {
+                chunk->getEntities(ActorType::ItemEntity, aabb, items, false);
+            }
+        }
     tempItems.reserve(items.size());
     for (auto& item : items) {
-        if (aabb.intersects(item->getAABB())) {
-            tempItems.push_back(item);
-        }
+        tempItems.emplace_back(gsl::make_not_null(item));
     }
     return gsl::span(tempItems);
 }
-
-TInstanceHook(bool, "?intersectsInner@AABB@@QEBA_NAEBV1@@Z", AABB, class AABB const& aabb) {
-    return intersects(aabb);
-}
-
-// TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
-//               "?fetchEntities@BlockSource@@UEAA?AV?$span@V?$not_null@PEAVActor@@@gsl@@$0?"
-//               "0@gsl@@PEBVActor@@AEBVAABB@@_N2@Z",
-//               BlockSource,
-//               class Actor const* actor,
-//               class AABB const& aabb,
-//               bool uk0,
-//               bool uk1) {
-//     // if (actor != nullptr)
-//     //     logger.info("{}", actor->getTypeName());
-//     if (i == 0) {
-//         pt().drawCuboid(aabb, this->getDimensionId());
-//     }
-//     return original(this, actor, aabb, uk0, uk1);
-// }
