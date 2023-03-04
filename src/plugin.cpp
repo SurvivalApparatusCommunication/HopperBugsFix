@@ -18,16 +18,18 @@
 #include "llapi/mc/ChunkPos.hpp"
 #include "llapi/mc/ChunkBlockPos.hpp"
 #include "llapi/mc/LevelChunk.hpp"
+#include "llapi/mc/LevelChunk.hpp"
 #include "llapi/ScheduleAPI.h"
-#include "llapi/ParticleAPI.h"
+#include "llapi/mc/WeakStorageEntity.hpp"
+#include "llapi/mc/WeakEntityRef.hpp"
+#include "llapi/mc/ActorClassTree.hpp"
 #include "gsl/gsl"
 
 #include "version.h"
 
 extern Logger logger;
 
-void PluginInit() {
-}
+void PluginInit() {}
 
 TInstanceHook(bool,
               "?canPullOutItem@JukeboxBlockActor@@UEBA_NHHAEBVItemStack@@@Z",
@@ -47,7 +49,7 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
               enum class ActorType type,
               class AABB const& aabb,
               class Actor const* actor) {
-    if (type != ActorType::ItemEntity || (aabb.max.x - aabb.min.x > 1) || (aabb.max.z - aabb.min.z > 1)) {
+    if (type != ActorType::ItemEntity) {
         return original(this, type, aabb, actor);
     }
 
@@ -55,19 +57,19 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
     ChunkPos maxChunk(((int)std::floor(aabb.max.x + 0.125f)) >> 4, ((int)std::floor(aabb.max.z + 0.125f)) >> 4);
 
     std::vector<gsl::not_null<class Actor*>>().swap(tempItems);
-    std::vector<class Actor*> items;
-    items.clear();
-
     for (int x = minChunk.x; x <= maxChunk.x; x++)
         for (int z = minChunk.z; z <= maxChunk.z; z++) {
             LevelChunk* chunk = getChunk({x, z});
             if (chunk != nullptr) {
-                chunk->getEntities(ActorType::ItemEntity, aabb, items, false);
+                for (auto& weakEntityRef : chunk->getChunkEntities()) {
+                    Actor* actor = SymCall("??$tryUnwrap@VActor@@$$V@WeakEntityRef@@QEBAPEAVActor@@XZ", Actor*,
+                                           WeakEntityRef*)(&weakEntityRef);
+                    if (actor != nullptr && ActorClassTree::isInstanceOf(*actor, ActorType::ItemEntity) &&
+                        aabb.intersects(actor->getAABB())) {
+                        tempItems.emplace_back(actor);
+                    }
+                }
             }
         }
-    tempItems.reserve(items.size());
-    for (auto& item : items) {
-        tempItems.emplace_back(gsl::make_not_null(item));
-    }
     return gsl::span(tempItems);
 }
