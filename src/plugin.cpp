@@ -13,7 +13,9 @@
 #include "llapi/mc/Vec2.hpp"
 #include "llapi/mc/Vec3.hpp"
 #include "llapi/mc/BlockPos.hpp"
+#include "llapi/mc/Block.hpp"
 #include "llapi/mc/AABB.hpp"
+#include "llapi/mc/StaticVanillaBlocks.hpp"
 #include "llapi/mc/BoundingBox.hpp"
 #include "llapi/mc/ChunkPos.hpp"
 #include "llapi/mc/ChunkBlockPos.hpp"
@@ -23,6 +25,7 @@
 #include "llapi/mc/WeakStorageEntity.hpp"
 #include "llapi/mc/WeakEntityRef.hpp"
 #include "llapi/mc/ActorClassTree.hpp"
+#include "llapi/mc/Scheduler.hpp"
 #include "gsl/gsl"
 
 #include "version.h"
@@ -62,8 +65,7 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
             LevelChunk* chunk = getChunk({x, z});
             if (chunk != nullptr) {
                 for (auto& weakEntityRef : chunk->getChunkEntities()) {
-                    Actor* actor = SymCall("??$tryUnwrap@VActor@@$$V@WeakEntityRef@@QEBAPEAVActor@@XZ", Actor*,
-                                           WeakEntityRef*)(&weakEntityRef);
+                    Actor* actor = weakEntityRef.tryUnwrap();
                     if (actor != nullptr && ActorClassTree::isInstanceOf(*actor, ActorType::ItemEntity) &&
                         aabb.intersects(actor->getAABB())) {
                         tempItems.emplace_back(actor);
@@ -73,3 +75,15 @@ TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
         }
     return gsl::span(tempItems);
 }
+
+TInstanceHook(bool, "?isContainerBlock@Block@@QEBA_NXZ", Block) {
+    return this == StaticVanillaBlocks::mComposter || original(this);
+}
+
+// TInstanceHook(void,
+//               "?processCoroutines@Scheduler@@QEAAXV?$duration@_JU?$ratio@$00$0DLJKMKAA@@std@@@chrono@std@@0@Z",
+//               Scheduler,
+//                std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>> r1,
+//                std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>> r2) {
+//     original(this, r1, std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>>{0});
+// }
