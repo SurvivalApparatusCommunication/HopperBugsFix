@@ -6,6 +6,7 @@
 #include <llapi/LoggerAPI.h>
 #include <llapi/mc/JukeboxBlockActor.hpp>
 #include <llapi/mc/ItemStack.hpp>
+#include <llapi/mc/ItemActor.hpp>
 #include <llapi/mc/Actor.hpp>
 #include <llapi/mc/Actor.hpp>
 #include <llapi/mc/BlockSource.hpp>
@@ -14,6 +15,7 @@
 #include "llapi/mc/Vec3.hpp"
 #include "llapi/mc/BlockPos.hpp"
 #include "llapi/mc/Block.hpp"
+#include "llapi/mc/Hopper.hpp"
 #include "llapi/mc/AABB.hpp"
 #include "llapi/mc/StaticVanillaBlocks.hpp"
 #include "llapi/mc/BoundingBox.hpp"
@@ -43,47 +45,54 @@ TInstanceHook(bool,
     return dAccess<int>(this, 632 - 240) > 2;
 }
 
-std::vector<gsl::not_null<class Actor*>> tempItems;
+TInstanceHook(bool,
+              "?_tryAddItemsFromPos@Hopper@@AEAA_NAEAVBlockSource@@AEAVContainer@@AEBVVec3@@@Z",
+              Hopper,
+              class BlockSource& blockSource,
+              class Container& container,
+              class Vec3 const& pos) {
+    AABB aabb;
 
-TInstanceHook(gsl::span<gsl::not_null<class Actor*>>,
-              "?fetchEntities@BlockSource@@UEAA?AV?$span@V?$not_null@PEAVActor@@@gsl@@$0?"
-              "0@gsl@@W4ActorType@@AEBVAABB@@PEBVActor@@@Z",
-              BlockSource,
-              enum class ActorType type,
-              class AABB const& aabb,
-              class Actor const* actor) {
-    if (type != ActorType::ItemEntity) {
-        return original(this, type, aabb, actor);
+    if (isEntity()) {
+        aabb.min = pos.sub(0.5f, 0.0f, 0.5f);
+        aabb.max = pos.add(0.5f, 1.0f, 0.5f);
+    } else {
+        aabb.min = pos;
+        aabb.min.y -= 0.375f;
+        aabb.max = pos + 1;
     }
 
     ChunkPos minChunk(((int)std::floor(aabb.min.x - 0.125f)) >> 4, ((int)std::floor(aabb.min.z - 0.125f)) >> 4);
     ChunkPos maxChunk(((int)std::floor(aabb.max.x + 0.125f)) >> 4, ((int)std::floor(aabb.max.z + 0.125f)) >> 4);
 
-    std::vector<gsl::not_null<class Actor*>>().swap(tempItems);
     for (int x = minChunk.x; x <= maxChunk.x; x++)
         for (int z = minChunk.z; z <= maxChunk.z; z++) {
-            LevelChunk* chunk = getChunk({x, z});
-            if (chunk != nullptr) {
-                for (auto& weakEntityRef : chunk->getChunkEntities()) {
-                    Actor* actor = weakEntityRef.tryUnwrap();
-                    if (actor != nullptr && ActorClassTree::isInstanceOf(*actor, ActorType::ItemEntity) &&
-                        aabb.intersects(actor->getAABB())) {
-                        tempItems.emplace_back(actor);
+            LevelChunk* chunk = blockSource.getChunk({x, z});
+            if (chunk == nullptr) {
+                continue;
+            }
+            for (auto& weakEntityRef : chunk->getChunkEntities()) {
+                auto* actor = weakEntityRef.tryUnwrap<Actor>();
+                if (actor == nullptr || !ActorClassTree::isInstanceOf(*actor, ActorType::ItemEntity) ||
+                    !aabb.intersects(actor->getAABB()) || actor->isRemoved()) {
+                    continue;
+                }
+                auto* item = ((ItemActor*)(actor))->getItemStack();
+                if (item == nullptr || item->isNull()) {
+                    continue;
+                }
+                if (_addItem(blockSource, container, *item, 0xFFFFFFFF, item->getCountNoCheck())) {
+                    if (item->getCountNoCheck() == 0) {
+                        actor->remove();
                     }
+                    return true;
                 }
             }
         }
-    return gsl::span(tempItems);
+
+    return false;
 }
 
 TInstanceHook(bool, "?isContainerBlock@Block@@QEBA_NXZ", Block) {
     return this == StaticVanillaBlocks::mComposter || original(this);
 }
-
-// TInstanceHook(void,
-//               "?processCoroutines@Scheduler@@QEAAXV?$duration@_JU?$ratio@$00$0DLJKMKAA@@std@@@chrono@std@@0@Z",
-//               Scheduler,
-//                std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>> r1,
-//                std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>> r2) {
-//     original(this, r1, std::chrono::duration<int64_t, struct std::ratio<1, 1000000000>>{0});
-// }
