@@ -81,7 +81,10 @@ TInstanceHook(bool,
                 if (item == nullptr || item->isNull()) {
                     continue;
                 }
-                if (_addItem(blockSource, container, *item, 0xFFFFFFFF, item->getCountNoCheck())) {
+                if (_addItem(blockSource, container, *item, -1, item->getCountNoCheck())) {
+                    if (item->getCountNoCheck() != 0) {
+                        _addItem(blockSource, container, *item, -1, item->getCountNoCheck()); // need to add twice
+                    }
                     if (item->getCountNoCheck() == 0) {
                         actor->remove();
                     }
